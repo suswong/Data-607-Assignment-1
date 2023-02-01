@@ -1,0 +1,83 @@
+---
+title: "DATA 607 Assignment 1"
+author: "Susanna Wong"
+date: "2023-01-30"
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Introduction
+
+The article provide information for college students on choosing a major that will allow them to have a higher chance of economic success. The major category, unemployment rate, and gender can play a role in their economic success.
+
+# Data
+
+The data set I used is from FiveThirtyEight. The article and data can be found in the links below. <https://fivethirtyeight.com/features/the-economic-guide-to-picking-a-college-major/> <https://github.com/fivethirtyeight/data/tree/master/college-majors>
+
+FiveThirtyEight gathered their data from American Community Survey 2010-2012 Public Use Mircrodata Series.
+
+```{r,message=FALSE}
+library(tidyverse)
+library(DT)
+recentgrad <- read.csv('https://raw.githubusercontent.com/fivethirtyeight/data/master/college-majors/recent-grads.csv')
+womenstem <- read.csv('https://raw.githubusercontent.com/fivethirtyeight/data/master/college-majors/women-stem.csv')
+datatable(womenstem)
+datatable(recentgrad)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+# Exploratory Data Analysis
+
+## Major Category
+
+In the table below, we can see which major category has the highest or lowest share of women and men. Engineering has the lowest share of women and highest share of men. Health has the highest share of women and lowest share of men. Students can take this information into consideration when choosing a major. Depending on the major they can see how competitive it will be based on their gender.
+
+```{r}
+new <-recentgrad%>%
+  group_by(Major_category)%>%
+  summarise(Total=sum(Total), Women=sum(Women), Men = sum(Men), ShareWomen = Women/Total, ShareMen=Men/Total)
+datatable(new)
+```
+
+```{r}
+p <- ggplot(new, aes(x=reorder(Major_category,-Total), y= Total)) + ggtitle("Major Category") + theme(plot.title=element_text(hjust=0.5))+theme(axis.text.x=element_text(angle=45,hjust=1))+ xlab("Major Category")+ ylab("Total")+ 
+geom_bar(stat = "identity",fill = "steelblue", color = "black")
+p + scale_y_continuous(labels = function(x) format(x, scientific = FALSE))
+
+p <- ggplot(new, aes(x=reorder(Major_category,-Total), y= Women)) + ggtitle("Major Category") + theme(plot.title=element_text(hjust=0.5))+theme(axis.text.x=element_text(angle=45,hjust=1))+ xlab("Major Category")+ ylab("Women")+ 
+geom_bar(stat = "identity",fill = "steelblue", color = "black")
+p + scale_y_continuous(labels = function(x) format(x, scientific = FALSE))
+
+p <- ggplot(new, aes(x=reorder(Major_category,-Total), y= Men)) + ggtitle("Major Category") + theme(plot.title=element_text(hjust=0.5))+theme(axis.text.x=element_text(angle=45,hjust=1))+ xlab("Major Category")+ ylab("Men")+ 
+geom_bar(stat = "identity",fill = "steelblue", color = "black")
+p + scale_y_continuous(labels = function(x) format(x, scientific = FALSE))
+```
+
+## Median Wage
+
+Below we have a table of the top 20 majors that have highest median wage. Most of these majors belong in the engineering category.
+
+```{r}
+summary(recentgrad$Median)
+top20median<-top_n(recentgrad, 20, Median)
+datatable(top20median)
+```
+
+##Unemoployment rate Below we have a table of the top 20 majors that have lowest unemployment rate. The category major that appears most often is engineering.
+
+```{r}
+top20lowestunemployment<-top_n(recentgrad, -20, Unemployment_rate)
+datatable(top20lowestunemployment)
+```
+
+# Conclusion
+
+Enginieering has the highest median wage, lowest unemployment rate and, lowest share of women. Petroleum Engineering has the highest median and lowest employment wage.
+
+I would consider to look further/verify into careers path that also may require more than just a bachelor degree. We should also take into consideration of jobs that do not need a college major as a qualification.
