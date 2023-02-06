@@ -1,0 +1,104 @@
+---
+title: "DATA 607 Assignment 2"
+author: "Susanna Wong"
+date: "2023-02-04"
+output: html_document
+code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Introduction
+
+In this assignment, I asked my friends and family to rate 6 movies on a scale of 1 to 5. I took their response and created a table in Below is the link to the Google Form. <https://docs.google.com/forms/d/e/1FAIpQLSd3ht1QlE3axt5LtI3KMkc4skkR9r6wn8PqtPYvVQphLhuQug/viewform>
+
+# Connect to SQL
+
+```{r}
+library(tidyverse)
+library(DT)
+library(RMySQL)
+library(DBI)
+dbconnect = dbConnect(RMySQL::MySQL(),
+                           dbname='Movie Rating',
+                           host='localhost',
+                           port=3306,
+                           user='root',
+                           password = rstudioapi::askForPassword("Database password"))
+
+rating <- dbGetQuery(dbconnect, "SELECT * FROM `Movie Rating`.`Movie Rating`")
+datatable(rating)
+```
+
+# Movie 
+Below is a table of the movies that each person is rating.
+
+```{r}
+movies <- dbGetQuery(dbconnect, "SELECT * FROM `Movie Rating`.Movie;")
+datatable(movies, caption = 'Table 1: Movie title and Year')
+
+```
+
+# Reviewer Information 
+Here is table of first name, age, and gender of each person.
+
+```{r}
+person <- dbGetQuery(dbconnect, "SELECT * FROM `Movie Rating`.Person;")
+datatable(person, caption = 'Table 2: Information of Reviewers')
+```
+
+# Analysis 
+Here is a table of each person's rating of each movie. There are missing values for those people who has not seen a movie. 4 people have never seen "Everything Everywhere All at Once" and "Scream". 2 people has never seen "Top Gun: Maverick".
+
+```{r }
+rating <- dbGetQuery(dbconnect, "SELECT * FROM `Movie Rating`.`Movie Rating`")
+datatable(rating, caption = 'Table 3: Ratings of each movie.')
+```
+
+Below is a table of the average rating of each movie. Some people did not see certain movies. So there are missing values. I used "na.rm = TRUE" to deal with missing values. Avengers: Endgame has the highest average rating and Scream has the lowest average rating. Both movies "Everything Everywhere All at Once" and "Scream" had 4 missing values each. Yet, "Everything Everywhere All at Once" had a higher average rating than "Scream" did.
+
+```{r}
+# #new <-rating%>%
+#   summarise(Avengers= mean(rating[, 5],na.rm = TRUE),Everything.Everywhere.All.at.Once= mean(rating[, 6],na.rm = TRUE), Black.Panther= mean(rating[, 7],na.rm = TRUE), Scream = mean(rating[, 8],na.rm = TRUE), Doctor.Strange= mean(rating[, 9],na.rm = TRUE), Top.Gun= mean(rating[, 10],na.rm = TRUE))
+# 
+# datatable(new, caption = 'Table 4: Average rating of each movie.')
+
+Avengers= mean(rating[, 5],na.rm = TRUE)
+Everything.Everywhere.All.at.Once= mean(rating[, 6],na.rm = TRUE)
+Black.Panther= mean(rating[, 7],na.rm = TRUE)
+Scream = mean(rating[, 8],na.rm = TRUE)
+Doctor.Strange= mean(rating[, 9],na.rm = TRUE) 
+Top.Gun= mean(rating[, 10],na.rm = TRUE)
+Movies <- c('Avengers: Endgame','Everything Everywhere All at Once','Black Panther: Wakanda Forever','Scream','Doctor Strange in the Multiverse of Madness','	
+Top Gun: Maverick' )
+Average_Rating <- c(Avengers,Everything.Everywhere.All.at.Once, Black.Panther, Scream, Doctor.Strange,  Top.Gun)
+
+new1 <- data.frame(Movies, Average_Rating)
+datatable(new1, caption = 'Table 4: Average rating of each movie.')
+
+p <- ggplot(new1, aes(x=reorder(Movies,-Average_Rating), y= Average_Rating)) + ggtitle("Movies") + theme(plot.title=element_text(hjust=0.5))+theme(axis.text.x=element_text(angle=45,hjust=1))+ xlab("Movies")+ ylab("Average_Rating")+ 
+geom_bar(stat = "identity",fill = "steelblue", color = "black")
+p + scale_y_continuous(labels = function(x) format(x, scientific = FALSE))
+
+```
+
+# Do either gender have a movie preference?
+
+The following movies has a higher average rating from females : 'Avengers: Endgame', 'Scream', and 'Top Gun: Maverick'.
+
+The following movies has a higher average rating from males : 'Everything Everywhere All at Once', and 'Black Panther: Wakanda Forever'.
+
+```{r}
+
+names(rating) <- c('id', 'Name', 'Gender', 'Age', 'Avengers', 'Everything.Everywhere.All.at.Once', 'Black.Panther', 'Scream', 'Doctor.Strange', 'Top.Gun')
+new2 <-rating%>%
+  group_by(Gender)%>%
+  summarise(Avengers=mean(Avengers, na.rm = TRUE), Everything.Everywhere.All.at.Once=mean(Everything.Everywhere.All.at.Once, na.rm = TRUE), Black.Panther = mean(Black.Panther, na.rm = TRUE), Scream = mean(Scream, na.rm = TRUE), Doctor.Strange=mean(Doctor.Strange, na.rm = TRUE), Top.Gun = mean(Top.Gun,na.rm = TRUE))
+
+datatable(new2)
+
+
+```
+
