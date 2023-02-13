@@ -1,0 +1,100 @@
+---
+title: "DATA 607 Assignment 3"
+author: "Susanna Wong"
+date: "2023-02-13"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#1. Using the 173 majors listed in fivethirtyeight.com's College Majors dataset [<https://fivethirtyeight.com/features/the-economic-guide-to-picking-a-college-major/>], provide code that identifies the majors that contain either "DATA" or "STATISTICS"
+
+```{r}
+major <- read.csv('https://raw.githubusercontent.com/fivethirtyeight/data/master/college-majors/majors-list.csv')
+
+library(stringr)
+library(dplyr)
+library(DT)
+new <-major %>%
+  filter(str_detect(Major, "DATA|STATISTICS"))
+datatable(new)
+```
+
+#2 Write code that transforms the data below:
+
+[1] "bell pepper" "bilberry" "blackberry" "blood orange"
+
+[5] "blueberry" "cantaloupe" "chili pepper" "cloudberry"
+
+[9] "elderberry" "lime" "lychee" "mulberry"
+
+[13] "olive" "salal berry"
+
+Into a format like this:
+
+c("bell pepper", "bilberry", "blackberry", "blood orange", "blueberry", "cantaloupe", "chili pepper", "cloudberry", "elderberry", "lime", "lychee", "mulberry", "olive", "salal berry")
+
+```{r}
+library(stringr)
+fruitstr = '[1] "bell pepper" "bilberry"   "blackberry"  "blood orange"
+[5] "blueberry"  "cantaloupe"  "chili pepper" "cloudberry"
+[9] "elderberry"  "lime"     "lychee"    "mulberry"
+[13] "olive"    "salal berry"'
+fruitstr
+
+#x <- str_extract_all(fruitstr,"[a-z]+\\s+[a-z]+")   This extract words with space in between
+#x
+
+z <- unlist(str_extract_all(fruitstr,"[a-z]+.[a-z]+"))
+z
+
+
+```
+
+#3 Describe, in words, what these expressions will match:
+
+(.)\\1\\1 
+The (.) means to match the repeat of a single letter. The "\1" is a backreference. "\1" appears twice after (.). Altogether, it means to capture the part of the string that match any character that repeats three times. 
+
+"(.)(.)\\2\\1" 
+It will look for within 4 letters, a pair of characters are followed by its reversed. For example, "okko" or "1yy1" and more.
+
+(..)\\1
+The (.) means to match the repeat of a pair of letters. The "\1" is a backreference. Altogether, it means to capture the part of the string that match any pair of characters that repeats such as "1212".
+
+"(.).\\1.\\1" 
+It will look for within 5 characters, three of the character will be the same and it will be separated by another character. For example, "12131" or "m!mba" and more.
+
+
+"(.)(.)(.).\*\\3\\2\\1"
+It will match any string that start with three character and end with the same three characters but reversed. In between both mentioned, there can by any number of characters. For example, "xyc1cyz" or "xyc1a12345cyz"
+
+#4 Construct regular expressions to match words that:
+
+Start and end with the same character. 
+"^(.).*\\1$"
+```{r}
+str_subset("churc","^(.).*\\1$")
+str_subset("JaJbJ","^(.).*\\1$")
+
+```
+
+Contain a repeated pair of letters (e.g. "church" contains "ch" repeated twice.) 
+"([A-Za-z][A-Za-z]).*\\1"
+```{r}
+str_subset("church","([A-Za-z][A-Za-z]).*\\1")
+str_subset("JaJbJ","([A-Za-z][A-Za-z]).*\\1")
+
+```
+
+Contain one letter repeated in at least three places (e.g. "eleven" contains three "e"s.)
+"([A-Za-z]).*\\1.*\\1"
+
+```{r}
+str_subset("jajaj","([A-Za-z]).*\\1.*\\1")
+str_subset("JaJaJ","([A-Za-z]).*\\1.*\\1")
+
+```
+
