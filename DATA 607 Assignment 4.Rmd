@@ -1,0 +1,189 @@
+---
+title: "DATA 607 Assignment 4"
+author: "Susanna Wong"
+date: "2023-02-26"
+output: 
+  html_document:
+    code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Import Data
+
+The flight data is stored <a href="https://github.com/suswong/Data-607-Assignments/blob/main/Flight%20Data.csv"> here</a>. The data is imported into R.
+
+```{r, message=FALSE}
+library(tidyr)
+library(dplyr)
+library(DT)
+flight_data <- read.csv('https://raw.githubusercontent.com/suswong/Data-607-Assignments/main/Flight%20Data.csv')
+datatable(flight_data)
+```
+
+Below is a list of issues with the data formatting:
+
+1\. The first two column has incorrect column names.
+
+2\. There are no data in the third row.
+
+3\. There are missing data in the first column.
+
+4\. In order to analyze each airline, we need the flight data in long format.
+
+# Tidy the Flight Data
+
+## Rename the Column Names
+
+Since the third row does not contain data, it is removed from the table. The first column is renamed as "Airline" and the second column is renamed as "Status".
+
+```{r, message=FALSE}
+new <- flight_data[-3,] #Remove the 3rd row
+colnames(new)<-c('Airline','Status','Los Angeles','Phoenix','San Diego','San Francisco','Seattle')
+datatable(new)
+```
+
+## Fill in the Missing Data
+
+There are missing values in the first column.
+
+```{r, message=FALSE}
+new[new==""]<-NA 
+filled_flight_data <- fill(new,Airline, .direction = c("down"))
+datatable(filled_flight_data)
+```
+
+## From Wide Format to Long Format
+
+I used pivot_long function to convert the data to long format.
+
+```{r, echo=FALSE}
+tidy_flight_data <- filled_flight_data %>% 
+  pivot_longer(cols = c('Los Angeles','Phoenix','San Diego','San Francisco','Seattle'))
+colnames(tidy_flight_data)<-c('Airline','Status','City','Flights')
+datatable(tidy_flight_data)
+```
+
+# Data Analysis
+
+## Alaska
+
+Filter out 'Alaska' from the flight data set. Alaska's lowest number of on time flight is 212. Alaska's highest number of on time flight is 1841. Alaska's lowest number of delayed flight is 12. Alaska's highest number of delayed flight is 305.
+
+```{r, message=FALSE}
+library(dplyr)
+Alaska <- tidy_flight_data%>%
+  filter(Airline =="Alaska")
+datatable(Alaska)
+```
+
+### Average Number of Flights by Status
+
+The average delayed flights for Alaska airline was 100.2 and the average on time flights Alaska airline was 654.8.
+
+```{r, message=FALSE}
+average_Alaska <- Alaska %>%
+  group_by(Status) %>%
+  summarise(Total_Flights = sum(Flights),Average_Flight = mean(Flights)) 
+Total_Flights_Alaska = sum(average_Alaska$Total_Flights)
+
+average_Alaska <- average_Alaska %>%
+  mutate(Percentage = (Total_Flights/Total_Flights_Alaska))
+colnames(average_Alaska)<-c('Status','Total Flights', 'Average Flights',"Percentage")
+datatable(average_Alaska)
+```
+
+## AM WEST
+
+Filter out 'AM WEST' from the flight data set. The lowest number of on time flight is 201. The highest number of on time flight is 4840. The lowest number of delayed flight is 61. The highest number of delayed flight is 415.
+
+```{r, message=FALSE}
+AM_WEST <- tidy_flight_data%>%
+  filter(Airline =="AM WEST")
+datatable(AM_WEST)
+```
+
+### Average Number of Flights by Status
+
+The average delayed flights for AM WEST was 157.4 and the average on time flights AM WEST airline was 1287.6.
+
+```{r, message=FALSE}
+library(scales)
+average_AM_WEST <- AM_WEST %>%
+  group_by(Status) %>%
+  summarise(Total_Flights = sum(Flights),Average_Flight = mean(Flights))
+Total_Flights_AM_WEST = sum(average_AM_WEST$Total_Flights)
+average_AM_WEST <- average_AM_WEST %>%
+  mutate(Percentage = percent((Total_Flights/Total_Flights_AM_WEST)))
+colnames(average_AM_WEST)<-c('Status','Total Flights', 'Average Flights',"Percentage")
+datatable(average_AM_WEST)
+```
+
+## Alaska v. AM WEST
+
+I merged the average flight tables by their common column. Then, I searched <a href="https://github.com/suswong/Data-607-Assignments/blob/main/Flight%20Data.csv"> how to create header rows to group column</a>. We can use 'kbl()' function from this package, 'kableExtra'. Although this function helps us create a very nice table, I prefer to use 'datatable()' from the 'DT' package. It allows us resort the table by column based on the highest value or lowest value of a targeted column.
+
+### Overall Flights
+
+AM WEST airline has a higher total flight, total delayed flights, and total on time flights compared to Alaska airline. However, Alaska airline has a overall higher percentage for flights delayed.
+
+```{r, message=FALSE}
+average_flights_by_airline <-merge(average_Alaska,average_AM_WEST, by ="Status", all.x=TRUE)
+colnames(average_flights_by_airline)<-c('Status','Total Flights', 'Average Flights','Percentage', 'Total Flights', 'Average Flights','Percentage')
+
+library(kableExtra)
+kbl(average_flights_by_airline) %>%
+  kable_classic() %>%
+  add_header_above(c(" " = 1, "Alaska Flights" = 3, "AM WEST Flights" = 3 ))
+```
+
+## Percentage of Delayed Flights by Airline For Each City
+
+Below is a table of percentage of flights on time or delayed based on city and airline. However, it is difficult to compare the percentage of delayed flights by airline for each city.
+
+```{r, message=FALSE}
+library(tidyverse)
+Percentage_by_City <- tidy_flight_data %>%
+  group_by(Airline,City) %>%
+  mutate(Percentage = Flights/sum(Flights))
+
+datatable(Percentage_by_City)
+```
+
+I filtered all data that contains the status, "delayed", and created a bar graph for it.
+
+From the bar graph below, AM WEST airline has a higher delayed flight percentage for each city.
+
+```{r, message=FALSE}
+Delayed_Percentage_by_City <- Percentage_by_City %>%
+  filter(Status =="delayed")
+
+ggplot(Delayed_Percentage_by_City, aes(fill=Airline, y= Percentage, x=City)) + 
+  ggtitle("Percentage of Delayed Flights by City") + theme(plot.title=element_text(hjust=0.5))+
+  theme(axis.text.x=element_text(angle=45,hjust=1))+ 
+  scale_y_continuous(labels=scales::percent) +
+    geom_bar(position="dodge", stat="identity")
+```
+
+## Percentage of On Time Flights by Airline For Each City
+
+From the bar graph below, AM WEST airline has a lower on time flight percentage for all cities. Alaska airline has a higher on time flight percentage for all cities.
+
+```{r, message=FALSE}
+library(tidyverse)
+
+On_Time_Percentage_by_City <- Percentage_by_City %>%
+  filter(Status =="on time")
+
+ggplot(On_Time_Percentage_by_City, aes(fill=Airline, y= Percentage, x=City)) + 
+  ggtitle("Percentage of On Time Flights by City") + theme(plot.title=element_text(hjust=0.5))+
+  theme(axis.text.x=element_text(angle=45,hjust=1))+ 
+  scale_y_continuous(labels=scales::percent) +
+    geom_bar(position="dodge", stat="identity")
+```
+
+# Conclusion
+
+AM WEST airline has more flights going to each city than Alaska airline did. However, AM WEST airline has a higher delayed flight percentage for each city. Alaska airline has a higher on time flight percentage for each city.
