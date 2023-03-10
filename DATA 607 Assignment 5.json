@@ -1,0 +1,25 @@
+{
+  "Books" : [
+    { 
+      "Title" : "Good Omens: The Nice and Accurate Prophecies of Agnes Nutter, Witch",
+      "Author" : "Neil Gaiman, Terry Pratchett",
+      "Genre" : "Fantasy, Fiction, Humor",
+      "Pages" : 512,
+      "Goodreads Rating" : 4.25
+      },
+    { 
+      "Title" : "Between the Lines",
+      "Author" : "Jodi Picoult, Samantha van Leer",
+      "Genre" : "Young Adult, Fantasy, Romance",
+      "Pages" : 385,
+      "Goodreads Rating" : 3.57
+      },
+    { 
+      "Title" : "The Talisman",
+      "Author" : "Stephen King, Peter Straub",
+      "Genre" : "Horror, Fantasy, Fiction, Triller",
+      "Pages" : 656,
+      "Goodreads Rating" : 4.12
+      }
+  ]
+}
