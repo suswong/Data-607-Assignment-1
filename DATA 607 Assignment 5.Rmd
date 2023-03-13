@@ -1,0 +1,123 @@
+---
+title: "DATA 607 Assignment 5"
+author: "Susanna Wong"
+date: "2023-03-09"
+output:
+  html_document:
+    code_folding: hide
+    toc: true
+editor_options: 
+  markdown: 
+    wrap: sentence
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# **Introduction**
+
+[Assignment Prompt]{.underline}
+
+Pick three of your favorite books on one of your favorite subjects. At least one of the books should have more than one author. For each book, include the title, authors, and two or three other attributes that you find interesting.
+
+Take the information that you've selected about these three books, and separately create three files which store the book's information in HTML (using an html table), XML, and JSON formats (e.g. "books.html", "books.xml", and "books.json"). To help you better understand the different file structures, I'd prefer that you create each of these files "by hand" unless you're already very comfortable with the file formats.
+
+Write R code, using your packages of choice, to load the information from each of the three sources into separate R data frames. Are the three data frames identical? Your deliverable is the three source files and the R code. If you can, package your assignment solution up into an .Rmd file and publish to rpubs.com. [This will also require finding a way to make your three text files accessible from the web].
+
+# **Create a table of books** 
+
+I used the app "TextEdit" to create three files with the same format. The three files are stored in my <a href="https://github.com/suswong/Data-607-Assignments"> Github</a> repository. Below are the links to three files:
+
+HTML: <https://github.com/suswong/Data-607-Assignments/blob/main/DATA%20607%20Assignment%205.html>
+
+JSON: <https://github.com/suswong/Data-607-Assignments/blob/main/DATA%20607%20Assignment%205.json>
+
+XML: <https://github.com/suswong/Data-607-Assignments/blob/main/savedXml1678597259.xml>
+
+Each file contains the following information of the three books:
+
+-   Title
+
+-   Author(s)
+
+-   Genre(s)
+
+-   Pages
+
+-   Goodreads Rating
+
+# **Load the files** 
+
+## HTML
+I used the following link to help me load html table. 
+https://www.scraperapi.com/blog/scrape-html-table-rvest/
+```{r}
+library(RCurl)
+library(rlist)
+library(rvest)
+library(DT)
+html_url <- "https://raw.githubusercontent.com/suswong/Data-607-Assignments/main/DATA%20607%20Assignment%205.html"
+
+HTML_file <- read_html(html_url)
+ #When you read_html(URL), it produces a list
+HTML_file
+
+HTML_df <- html_table(HTML_file) 
+HTML_df <- HTML_df[[1]] #There is a list of dataframes
+
+datatable(HTML_df)
+```
+## JSON
+I used the following link to help me load the JSON file:
+https://stackoverflow.com/questions/36454638/how-can-i-convert-json-to-data-frame-in-r
+```{r}
+library(jsonlite)
+JSON_url <- "https://raw.githubusercontent.com/suswong/Data-607-Assignments/main/DATA%20607%20Assignment%205.json"
+
+JSON_data <- fromJSON(JSON_url)
+#JSON_df <- as.data.frame(do.call("cbind",JSON_data))
+class(JSON_data) # it reads in as a list of 3. 
+
+JSON_df <- data.frame(JSON_data)
+datatable(JSON_df) 
+```
+
+### Tidy Column Names
+
+```{r}
+tidy_JSON_df <- JSON_df
+colnames(tidy_JSON_df) <- c("Title","Author", "Genre","Pages","Goodreads Rating")
+datatable(tidy_JSON_df)
+```
+## XML
+
+I used this link to help me load the XML file:
+https://stackoverflow.com/questions/67319946/cant-read-an-xml-file-with-r 
+```{r}
+library(XML)
+XML_url <- "https://raw.githubusercontent.com/suswong/Data-607-Assignments/main/savedXml1678597259.xml"
+
+XML_file <- getURL(XML_url)
+XML_data <- xmlParse(XML_file)
+XML_df <- xmlToDataFrame(XML_data)
+
+datatable(XML_df) 
+```
+
+# **Conclusion** 
+
+Since all three files were in different formatting, we needed to used different packages to load it. The package "RCurl" had to be used for the XML file. Otherwise, we would receive the following the followin error:"Error: XML content does not seem to be XML: ''". 
+All of the dataframes are similar at the end. However, the column names of JSON dataframe include "Books.". I had to rename the column names for the JSON dataframe.
+
+```{r}
+HTML_df
+```
+
+```{r}
+JSON_df
+```
+
+```{r}
+XML_df
+```
