@@ -1,0 +1,165 @@
+---
+title: "DATA 607 NYT API"
+author: "Susanna Wong"
+date: "2023-03-23"
+#runtime: shiny
+output:
+  html_document:
+    theme: cerulean
+    code_folding: hide
+    toc: true
+    toc_float: true
+editor_options: 
+  markdown: 
+    wrap: sentence
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Assignment Prompt
+
+The New York Times web site provides a rich set of APIs, as described here: https://developer.nytimes.com/apis You’ll need to start by signing up for an API key.
+Your task is to choose one of the New York Times APIs, construct an interface in R to read in the JSON data, and transform it into an R DataFrame.
+
+# Retreive Data from API {.tabset}
+
+I sign up for an API key on the New York Times website. I will be retrieving JSON data related to movie reviews
+
+## Connect to New York Times API
+
+We will use GET() function from the HTTR package to make a request to retrieve data from New York Times API. The status is 200, which indicates a successful request. A status of 401 indicates a unsuccessful request due to unauthorization. For more information regarding other status number, look  <a href="https://www.restapitutorial.com/httpstatuscodes.html"> here </a>.
+
+```{r }
+library(jsonlite)
+library(httr)
+library(DT)
+
+movies_url <- "https://api.nytimes.com/svc/movies/v2/reviews/picks.json?&api-key=lUEiZ4B7FNb2Nh9v3Xpy8w14vTaPAapg"
+mov_response  = GET(movies_url) #response from the request GET()
+
+mov_response
+
+
+article_url <- "https://api.nytimes.com/svc/mostpopular/v2/viewed/1.json?api-key=W3DrQnpNWXQ253JBiRWf6Vo0AX1w1BSI"
+
+article_response = GET(article_url)
+
+article_response
+
+```
+
+
+## JSON Data {.tabset}
+
+### Movie Reviews
+```{r}
+NYT_content <- rawToChar(mov_response$content)
+
+data = fromJSON(rawToChar(mov_response$content), flatten = TRUE)
+names(data)
+
+data <- as.data.frame(data)
+
+data
+```
+
+### Popular Articles
+```{r}
+NYT_article <- rawToChar(article_response$content)
+
+article_data = fromJSON(NYT_article , flatten = TRUE)
+names(article_data)
+
+article_data <- as.data.frame(article_data)
+
+article_data
+```
+
+# JSON data to Dataframe {.tabset}
+
+## Movies Review: Critic's Pick {.tabset}
+
+The data contains recent 20 critic's movie picks on New York Times. 
+
+### Remove columns
+
+We do not need the following columns: status", "has_more", "num_results", "results.opening_date", "results.date_updated", "results.link.type", "results.link.suggested_link_text", "results.multimedia.height", "results.multimedia.width".
+
+Since most of the values in the 'mpaa_rating' column are missing, this column will be dropped. 
+```{r}
+names(data)
+tidied_data <- data[c("copyright", "results.display_title", "results.critics_pick", "results.byline","results.headline", "results.summary_short","results.publication_date","results.link.url","results.multimedia.src" )]                      
+colnames(tidied_data) <- c("copyright", "film_title", "critics_pick", "critic_name","NYT_headline", "short_summary","publication_date","link.url","multimedia.src" )
+
+tidied_data <- tidied_data[c( "film_title","multimedia.src", "critics_pick", "critic_name","NYT_headline", "short_summary","publication_date","link.url", "copyright" )]
+
+datatable(tidied_data,options = list(scrollX = TRUE), colnames=c("Movie Title","Movie Image", "Critic's Pick", "Critic Name","NYT Headline", "Short Summary","Publication Date","Article URL", "Copyright"))
+```
+
+### Display images 
+
+There is column that provides the images associated with the movie. In order to display, we need to append "<img src=" in front of every url and "'height='200'></img>" at the end of each URL. 
+```{r}
+# The code below helps us show the images from the provided URL in the 'multimedia.src' column. This code requires manual work of inserting each unique link
+#tidied_data$multimedia.src[grep("https://static01.nyt.com/images/2023/03/23/multimedia/tori-lokita-mplb/tori-lokita-mplb-mediumThreeByTwo440.jpg", tidied_data$multimedia.src)] <- "<img src='https://static01.nyt.com/images/2023/03/23/multimedia/tori-lokita-mplb/tori-lokita-mplb-mediumThreeByTwo440.jpg'height='200'></img>' 
+
+# The code below helps us show the images from the provided URL in the 'multimedia.src' column. It is easier than above. 
+
+tidied_data$multimedia.src <- paste("<img src='", tidied_data$multimedia.src)
+tidied_data$multimedia.src <- paste(tidied_data$multimedia.src, "'height='150'width='300'></img>")
+
+datatable(tidied_data,options = list(scrollX = TRUE), escape = FALSE, colnames=c("Movie Title","multimedia.src", "Critic's Pick", "Critic Name","NYT Headline", "Short Summary","Publication Date","Article URL", "Copyright"))
+```
+
+## Popular Articles {.tabset}
+The data contains 20 popular articles from New York Times. 
+
+### Remove columns
+
+We do not need the following columns: status", "num_results", "results.uri",  "results.id", "results.asset_id", results.source", "results.updated", "results.subsection", "results.nytdsection", "results.column", "results.type", "results.des_facet", "results.org_facet", "results.per_facet",  "results.geo_facet", "results.media", "results.eta_id"  
+
+```{r}
+names(article_data)
+
+article_data1 <- article_data[c("results.url", "results.published_date",
+"results.section", "results.adx_keywords", "results.byline","results.title" ,"results.abstract")]  
+
+colnames(article_data1) <- c("article_url", "published_date",
+"section", "adx_keywords", "author","article_title" ,"abstract")
+
+article_data1 <- article_data1[c("published_date","article_title","author","section", "adx_keywords" ,"abstract","article_url"
+ )]
+
+datatable(article_data1,options = list(scrollX = TRUE), colnames=c("Published Date","Article Title","Author","Section", "Adx keywords" ,"Abstract","Article URL"))
+```
+
+### Percentage of Article for Each Section
+
+There are 11 sections:"World",  "U.S.", "Health", "Style", "Opinion", "Technology"  "Travel",  "Real Estate", "Arts", "Sports","Movies"  
+```{r, message=FALSE}
+library(tidyverse)
+unique(article_data1$section)
+article_section <- article_data1 %>% 
+  count(section) %>% 
+  mutate(percentage = (n / 20)*100)
+
+article_section %>% 
+  arrange(desc(percentage)) %>%
+  ggplot(., aes(x = reorder(section, percentage), y = percentage)) +
+  geom_bar(stat = 'identity', fill = 'lightblue') +
+  coord_flip() + ggtitle("Percentage of Article for Each Section") +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  ylab("Percentage of Article") +
+  xlab("Section")
+```
+
+
+# Source
+
+1. The link below provide information on how to request data from API in R. 
+https://www.dataquest.io/blog/r-api-tutorial/
+
+2. The link below provides the formatting of inserting images. 
+https://stackoverflow.com/questions/62970417/rendering-images-in-dt-table-in-r-shiny
