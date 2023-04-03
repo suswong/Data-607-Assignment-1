@@ -1,0 +1,514 @@
+---
+title: "DATA 607 Sentiment Analysis"
+author: "Susanna Wong"
+date: "2023-03-29"
+output:
+  html_document:
+    theme: cerulean
+    code_folding: hide
+    toc: true
+    toc_float: true
+editor_options: 
+  markdown: 
+    wrap: sentence
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Assignment Prompt
+
+In Text Mining with R, Chapter 2 looks at Sentiment Analysis.
+In this assignment, you should start by getting the primary example code from chapter 2 working in an R Markdown document.
+You should provide a citation to this base code.
+You're then asked to extend the code in two ways:
+
+-   Work with a different corpus of your choosing,
+
+-   and Incorporate at least one additional sentiment lexicon (possibly from another R package that you've found through research).
+
+# Text Mining with R {.tabset}
+
+In Text Mining with R, Chapter 2 looks at Sentiment Analysis.
+
+## Load Lexicon
+
+We observe three lexicons from the 'textdata' package in R.
+All three lexicons contains unigrams.
+
+```{r}
+library(tidytext)
+library(textdata)
+
+get_sentiments("afinn")
+get_sentiments("bing")
+get_sentiments("nrc")
+```
+
+## Sentiment Analysis of 6 Jane Austin Books {.tabset}
+
+### Load corpus in R
+
+The 'janeaustenr' package contains text from 6 Jane Austin's completed books: "Sense & Sensibility", "Pride & Prejudice", "Mansfield Park", "Emma", "Northanger Abbey", and "Persuasion".
+
+```{r, message=FALSE}
+library(janeaustenr)
+library(dplyr)
+library(stringr)
+
+tidy_books <- austen_books() %>%
+  group_by(book) %>%
+  mutate(
+    linenumber = row_number(),
+    chapter = cumsum(str_detect(text, 
+                                regex("^chapter [\\divxlc]", 
+                                      ignore_case = TRUE)))) %>%
+  ungroup() %>%
+  unnest_tokens(word, text)
+
+knitr::kable(head(tidy_books, 50), caption = "This table contain the first 100 observation of the tidy_books dataframe.")
+```
+
+### Filter for Joy Words from "Emma"
+
+Use the 'filter' function from the 'dplyr' package to filter joy words from the 'ncr' lexicon and filter text from the book "Emma" and inner join both dataframe.
+
+```{r, message=FALSE}
+library(DT)
+nrc_joy <- get_sentiments("nrc") %>% 
+  filter(sentiment == "joy")
+
+Emma <- tidy_books %>%
+  filter(book == "Emma") %>%
+  inner_join(nrc_joy) %>%
+  count(word, sort = TRUE)
+
+datatable(Emma)
+```
+
+### Number of Positive and Negative Sentiment for Each Book
+
+Using 'bing', a lexicon package, count the number of positive and negative words for each book.
+Then, calculate the net sentiment (postive - negative).
+
+```{r, warning=FALSE, message=FALSE}
+library(tidyr)
+
+jane_austen_sentiment <- tidy_books %>%
+  inner_join(get_sentiments("bing")) %>%
+  count(book, index = linenumber %/% 80, sentiment) %>%
+  pivot_wider(names_from = sentiment, values_from = n, values_fill = 0) %>% 
+  mutate(sentiment = positive - negative)
+
+datatable(jane_austen_sentiment)
+```
+
+### Data Visualiztion of Sentiment Changes Over the Plot Trajectory
+
+The net sentiment is plot aqainst the narrative time (index on x-axis).
+We can view how net sentiment changes over the plot trajectory.
+
+```{r}
+library(ggplot2)
+
+ggplot(jane_austen_sentiment, aes(index, sentiment, fill = book)) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~book, ncol = 2, scales = "free_x")
+```
+
+### Comparing the Three Sentiment Dictionaries
+
+Compare how the sentiment changes in Jane Ausin's "Pride and Prejuduce" using three sentiment dictionaries.
+We can see on the plot there are similar overall trends in the sentiment across the book.
+
+```{r, message=FALSE, warning=FALSE}
+pride_prejudice <- tidy_books %>% 
+  filter(book == "Pride & Prejudice")
+
+pride_prejudice 
+afinn <- pride_prejudice %>% 
+  inner_join(get_sentiments("afinn")) %>% 
+  group_by(index = linenumber %/% 80) %>% 
+  summarise(sentiment = sum(value)) %>% 
+  mutate(method = "AFINN")
+
+bing_and_nrc <- bind_rows(
+  pride_prejudice %>% 
+    inner_join(get_sentiments("bing")) %>%
+    mutate(method = "Bing et al."),
+  pride_prejudice %>% 
+    inner_join(get_sentiments("nrc") %>% 
+                 filter(sentiment %in% c("positive", 
+                                         "negative"))
+    ) %>%
+    mutate(method = "NRC")) %>%
+  count(method, index = linenumber %/% 80, sentiment) %>%
+  pivot_wider(names_from = sentiment,
+              values_from = n,
+              values_fill = 0) %>% 
+  mutate(sentiment = positive - negative)
+
+bind_rows(afinn, 
+          bing_and_nrc) %>%
+  ggplot(aes(index, sentiment, fill = method)) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~method, ncol = 1, scales = "free_y")
+```
+
+# Extended Practice {.tabset}
+
+Extend the code in two ways:
+
+-   Work with a different corpus of your choosing,
+
+-   and Incorporate at least one additional sentiment lexicon (possibly from another R package that you've found through research).
+
+## Romeo and Juliet {.tabset}
+
+### Download the text from Gutenburg
+
+Based on the Gutenburg website, the most popular book is "Romeo and Juliet".
+We will run sentimental analysis on the most popular book.
+
+We need to find the id number of the book to download the text into our R.
+The 'gutenberg_works' function a table of Gutenburg metadata.
+Use the 'filter' function to filter only information related to "Romeo and Juliet".
+Use 'gutenberg_download()' function to download the text.
+
+```{r, message=FALSE, warning=FALSE}
+library(gutenbergr)
+library(DT)
+gutenberg_works() %>%
+  filter(title == "Romeo and Juliet")
+
+romeo_and_juliet <- gutenberg_download(1513)
+
+knitr::kable(head(romeo_and_juliet, 50), caption = "This table contain the first 50 lines of 'Romeo and Juliet'.")
+
+```
+
+### Tidy text
+
+In order to run our sentimental analysis, we need the text as one-token-per-row format by using the 'unnest_tokens' function in the 'tidytext' package.
+
+```{r}
+romeo_and_juliet <- romeo_and_juliet[c("text")] %>%
+  mutate(
+    linenumber = row_number(),
+    chapter = cumsum(str_detect(text, 
+                                regex("^chapter [\\divxlc]", 
+                                      ignore_case = TRUE)))) %>%
+  ungroup() %>%
+  unnest_tokens(word, text)
+
+datatable(head(romeo_and_juliet,100))
+```
+
+### Number of Positive and Negative Sentiment
+
+The top words associated with negative sentiment are related to "death".
+The top word associated with positive sentiment is "love".
+
+```{r, message=FALSE, warning=FALSE}
+library(wordcloud)
+library(reshape2)
+
+word_count <- romeo_and_juliet %>%
+  inner_join(get_sentiments("bing")) %>%
+  count(word, sentiment, sort = TRUE)
+
+word_count %>%
+  group_by(sentiment)%>%
+  top_n(10)%>%
+  ungroup() %>%
+  mutate(word = reorder(word, n)) %>%
+  ggplot(aes(word, n, fill = sentiment)) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~sentiment, scales = "free_y") +
+  labs(
+    y = "Contribution to sentiment",
+    x = NULL
+  ) +
+  coord_flip()
+
+word_count%>%
+  acast(word ~ sentiment, value.var = "n", fill = 0) %>%
+  comparison.cloud(colors = c("red", "green"),
+                   max.words = 100)
+```
+
+### NRC
+
+"Death" appears in the anger, anticipation, disgust, fear, negative, sadness, and surprise.
+
+```{r, message=FALSE, warning=FALSE}
+romeo_and_juliet_nrc <- romeo_and_juliet %>% 
+    inner_join(get_sentiments("nrc")) %>%
+    count(word, sentiment)
+romeo_and_juliet_nrc
+
+romeo_and_juliet_nrc %>% 
+  group_by(sentiment)%>%
+  top_n(10)%>%
+  ungroup() %>%
+  mutate(word = reorder(word, n)) %>%
+  ggplot(aes(word, n, fill = sentiment)) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~sentiment, scales = "free_y") +
+  labs(
+    y = "Contribution to sentiment",
+    x = NULL
+  ) +
+  coord_flip()
+
+```
+
+### Net Sentiment
+
+There is one more lexicon we have not used from the 'textdata' package.
+"loughran" is a lexicon mainly <a href="https://emilhvitfeldt.github.io/textdata/reference/lexicon_loughran.html"> use with financial statements </a>.
+
+Compare how the sentiment changes in "Romeo and Juliet" using four sentiment dictionaries.
+We can see on the plot there are similar overall trends in the sentiment across the book.
+There is negative sentiment at the end of the book.
+This is not surprising as Romeo and Juliet had a tragic ending.
+
+```{r, warning=FALSE, message=FALSE}
+afinn1 <- romeo_and_juliet %>% 
+  inner_join(get_sentiments("afinn")) %>% 
+  group_by(index = linenumber %/% 80) %>% 
+  summarise(sentiment = sum(value)) %>% 
+  mutate(method = "AFINN")
+
+bing_and_nrc1 <- bind_rows(
+  romeo_and_juliet %>% 
+    inner_join(get_sentiments("bing")) %>%
+    mutate(method = "Bing et al."),
+  romeo_and_juliet %>% 
+    inner_join(get_sentiments("nrc") %>% 
+                 filter(sentiment %in% c("positive", 
+                                         "negative"))
+    ) %>%
+    mutate(method = "NRC"),
+    romeo_and_juliet %>% 
+    inner_join(get_sentiments("loughran") %>% 
+                 filter(sentiment %in% c("positive", 
+                                         "negative"))
+    ) %>%
+    mutate(method = "loughran")) %>%
+  count(method, index = linenumber %/% 80, sentiment) %>%
+  pivot_wider(names_from = sentiment,
+              values_from = n,
+              values_fill = 0) %>% 
+  mutate(sentiment = positive - negative)
+
+bind_rows(afinn1, 
+          bing_and_nrc1) %>%
+  ggplot(aes(index, sentiment, fill = method)) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~method, ncol = 1, scales = "free_y")
+```
+
+## Top 5 Popular Books on Gutenburg {.tabset}
+
+According to Gutenburg, the top 5 ebooks are: "Romeo and Juliet" by William Shakespeare, "A Room with a View" by E.
+M. Forster, "Middlemarch" by George Eliot, "Moby Dick; Or, The Whale" by Herman Melville, and "Little Women; Or, Meg, Jo, Beth, and Amy" by Louisa May Alcott.
+
+```{r, message=FALSE}
+library(gutenbergr)
+library(DT)
+gutenberg_works() %>%
+  filter(title %in%  c("Romeo and Juliet","A Room with a View","Middlemarch","Moby Dick; Or, The Whale", "Little Women; Or, Meg, Jo, Beth, and Amy"))
+
+top_5_books <- gutenberg_download(c(1513, 2641, 145, 2489, 37106))
+```
+
+### Tidy text
+
+In order to run our sentimental analysis, we need the text as one-token-per-row format by using the 'unnest_tokens' function in the 'tidytext' package.
+
+```{r}
+top_5_books <- top_5_books %>%
+    group_by(gutenberg_id) %>%
+  mutate(
+    linenumber = row_number(),
+    chapter = cumsum(str_detect(text, 
+                                regex("^chapter [\\divxlc]", 
+                                      ignore_case = TRUE)))) %>%
+  ungroup() %>%
+  unnest_tokens(word, text)
+
+top_5_books$gutenberg_id[grep("145", top_5_books$gutenberg_id)] <- "Middlemarch"
+top_5_books$gutenberg_id[grep("1513", top_5_books$gutenberg_id)] <- "Romeo and Juliet"
+top_5_books$gutenberg_id[grep("2489", top_5_books$gutenberg_id)] <- "Moby Dick; Or, The Whale"
+top_5_books$gutenberg_id[grep("2641", top_5_books$gutenberg_id)] <- "A Room with a View"
+top_5_books$gutenberg_id[grep("37106", top_5_books$gutenberg_id)] <- "Little Women"
+
+colnames(top_5_books)[1] <- "book"
+
+datatable(head(top_5_books,100))
+```
+
+### Percentage of Sentiment in Each Book
+
+Out of all 5 books, "Little Women" has the highest percentage of positive words.
+"Romeo and Juliet" has the highest percentage of negative words.
+
+```{r, warning=FALSE, message=FALSE}
+
+top_5_books_bing <- top_5_books %>%
+  inner_join(get_sentiments("bing")) %>%
+  group_by(book) %>%
+  count(sentiment, sort = TRUE) %>%
+  ungroup()
+
+top_5_books_bing <- top_5_books_bing  %>%
+  group_by(book) %>%
+  mutate(percentage =  (n/sum(n)))
+
+library(scales)
+top_5 <- top_5_books_bing 
+top_5$percentage <- percent(top_5$percentage, accuracy = 1)
+datatable(top_5)
+```
+
+### Visualization of Percentage of Sentiment in Each Book
+
+Only two books has a higher percentage of positive words than negative words: "Middlemarch" and "Little Women".
+"Little Women" has the highest percentage of positive words and lowest percentage of negative words.
+
+```{r}
+ggplot(top_5_books_bing, aes(x=book, y=percentage, fill=sentiment)) +
+    geom_bar(stat='identity', position='dodge')+
+  coord_flip() + scale_y_continuous(labels = scales::percent) 
+
+```
+
+### Sentiment Changes Over the Plot Trajectory
+
+```{r, message=FALSE, warning=FALSE}
+top_5_books_sentiment <- top_5_books %>%
+  inner_join(get_sentiments("bing")) %>%
+  count(book, index = linenumber %/% 80, sentiment) %>%
+  pivot_wider(names_from = sentiment, values_from = n, values_fill = 0) %>% 
+  mutate(sentiment = positive - negative)
+
+datatable(head(top_5_books_sentiment,100))
+```
+
+### Data Visualization of Sentiment Changes Over the Plot Trajectory
+
+"A Room with a View" plot started with negative sentiment and ended with negative sentiment.
+
+The "Little Women" was contains mostly positive sentiment throughout the plot.
+
+"Romeo and Juliet" plot started with negative sentiment and ended with negative sentiment.
+This was not surprising as Romeo and Juliet faced a lot of obstacles and had a tragic ending.
+
+"Middlemarch" plot started with positive sentiment and ended with positive sentiment.
+
+"Moby Dick" ended with negative sentiment.
+
+```{r}
+ggplot(top_5_books_sentiment, aes(index, sentiment, fill = book)) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~book, ncol = 2, scales = "free_x")
+```
+
+## Financial News {.tabset}
+
+There is one more lexicon we have not used from the 'textdata' package.
+"loughran" is a lexicon mainly <a href="https://emilhvitfeldt.github.io/textdata/reference/lexicon_loughran.html"> use with financial statements </a>.
+
+On <a href="https://www.kaggle.com/datasets/ankurzing/sentiment-analysis-for-financial-news"> Kaggle </a>, I found a dataset that contains financial news headlines.
+
+### Tidy text
+
+In order to run our sentimental analysis, we need the text as one-token-per-row format by using the 'unnest_tokens' function in the 'tidytext' package.
+
+```{r}
+library(tidyr)
+library(dplyr)
+library(stringr)
+raw_financial <- read.delim(file = "https://raw.githubusercontent.com/suswong/Data-607-Assignments/main/all-data.csv", header = FALSE, sep = ",")
+
+datatable(raw_financial)
+
+colnames(raw_financial) <- c("sendiment","text")
+
+tidy_financial <- raw_financial[-1] %>%
+  mutate(
+    linenumber = row_number()) %>%
+  ungroup() %>%
+  unnest_tokens(word, text)
+```
+
+### Sentiment Analysis
+
+```{r, warning=FALSE, message=FALSE}
+get_sentiments("loughran")
+
+financial_sentiment <- tidy_financial %>%
+  inner_join(get_sentiments("loughran")) %>%
+  count(word, index = linenumber, sentiment) %>%
+  pivot_wider(names_from = sentiment, values_from = n, values_fill = 0)
+
+g <- tidy_financial %>%
+  inner_join(get_sentiments("loughran")) %>%
+  count(sentiment) 
+
+ggplot(g, aes(x= reorder(sentiment, n), y=n)) +
+  geom_bar(stat="identity") + coord_flip()
+
+word_count_financial <- tidy_financial %>%
+  inner_join(get_sentiments("loughran")) %>%
+  count(word, sentiment, sort = TRUE)
+
+datatable(word_count_financial)
+
+word_count_financial %>%
+  acast(word ~ sentiment, value.var = "n", fill = 0) %>%
+  comparison.cloud(colors = c("red", "green"),
+                   max.words = 100)
+
+```
+
+# Conclusion
+
+**Romeo and Juliet**
+
+With the graph visualization of the net sentiment of the plot, we can see that there are periods of up and down sentiment.
+However, ultimately, the plot ended with negative sentiment.
+This is not surprising as star crossed lovers had a tragic ending.
+
+**Top 5 Ebooks on Gutenberg**
+
+According to Gutenburg, the top 5 ebooks are:
+
+-   "Romeo and Juliet" by William Shakespeare
+
+-   "A Room with a View" by E.
+    M. Forster
+
+-    "Middlemarch" by George Eliot
+
+-   "Moby Dick; Or, The Whale" by Herman Melville
+
+-   "Little Women; Or, Meg, Jo, Beth, and Amy" by Louisa May Alcott.
+
+Out of all 5 books, "Little Women" has the highest percentage of positive words and 
+"Romeo and Juliet" has the highest percentage of negative words. Both "A Room with a View" and "Romeo and Juliet" plot started with negative sentiment and ended with negative sentiment. "Middlemarch" plot started with positive sentiment and ended with positive sentiment. "Moby Dick" ended with negative sentiment.
+
+# Source
+
+1.  Silge, J., & Robinson, D.
+    (2017).
+    Text mining with R: A tydy approach.
+    O´Reilly.
+
+2.  Loughran-McDonald sentiment lexicon — lexicon_loughran. (n.d.). https://emilhvitfeldt.github.io/textdata/reference/lexicon_loughran.html
+
+3.  Sentiment Analysis for Financial News. (2020, May 27). Kaggle. https://www.kaggle.com/datasets/ankurzing/sentiment-analysis-for-financial-news
+
+4. Project Gutenberg. (n.d.). Project Gutenberg. https://www.gutenberg.org/
