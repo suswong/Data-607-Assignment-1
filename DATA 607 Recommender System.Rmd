@@ -106,6 +106,15 @@ Perhaps Tinder can create a separate mode for those to meet new people.
 Another popular dating app, Bumble, has a similar idea.
 Bumble has other modes beside dating: Bumble BFF, and Bumble Bizz.
 
+**Safety**
+
+Tinder has a photo verification to verify if the user is real or not.
+However, users can easily create fake profiles.
+Users can initally use their own photos to complete the verification process.
+Once the verification process is complete, fake users switch out their photos with someone else photos.
+Tinder should implement a program to periodically check verified users.
+They should periodically compare verified photos with profile photos.
+
 # Source
 
 1.  Karthikeyan, A.
