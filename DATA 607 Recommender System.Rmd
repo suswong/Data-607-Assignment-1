@@ -1,0 +1,141 @@
+---
+title: "DATA 607 Recommender System"
+author: "Susanna Wong"
+date: "2023-04-19"
+output:
+  html_document:
+    theme: cerulean
+    code_folding: hide
+    toc: true
+    toc_float: true
+editor_options: 
+  markdown: 
+    wrap: sentence
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Assignment Prompt
+
+Your task is to analyze an existing recommender system that you find interesting.
+You should:
+
+1.  Perform a Scenario Design analysis as described below.
+    Consider whether it makes sense for your selected recommender system to perform scenario design twice, once for the organization (e.g. Amazon.com) and once for the organization's customers.
+
+2.  Attempt to reverse engineer what you can about the site, from the site interface and any available information that you can find on the Internet or elsewhere.
+
+3.  Include specific recommendations about how to improve the site's recommendation capabilities going forward.
+
+4.  Create your report using an R Markdown file, and create a discussion thread with a link to the GitHub repo where your Markdown file notebook resides.
+    You are not expected to need to write code for this discussion assignment.
+
+# Tinder
+
+Tinder is one of the most popular dating app that allows users to swipe, and match with other users.
+Users can swipe right to like someone, swipe left to pass someone, or swipe up to superlike someone.
+Two users are matched when they swipe right for each other.
+Once two users are matched, they can start messaging each other.
+
+# Scenario Analysis {.tabset}
+
+## Organization {.tabset}
+
+### Who are your target users?
+
+Tinder is open to anyone 18 years old and older.
+Their target users are mainly for anyone looking for some sort of romantic relationship.
+However, the majority of the users are ages 18 to 25 (Karthikeyan, 2023).
+Over 50% of the users are based in the United States.
+
+### What are their key goals?
+
+Tinder's goal is to help users connect to new people using their personalize recommendation and to improve users matches (MLconf, 2017).
+
+### How can you help them accomplish their goals?
+
+According to California Sunday Magazine, Tinder uses a system of "smart matching" to help users get matches (Bowles, 2016).
+Those who do get a lot of right swipes (likes) get shown to less users and those who don't get a lot of right swipes get shown to more users.
+This way people who don't get a lot of likes can gain some matches .
+
+## User {.tabset}
+
+### Who are your target users?
+
+Users are on tinder for one or more of the following reasons (Morley, 2023):
+
+-   one night stand
+
+-   short/long term relationship
+
+-   chat
+
+-   curiosity/out of boredom
+
+-   a confidence boost
+
+### What are their key goals?
+
+Through their matches, users can build relationships based on their relationship goals and matches.
+
+# Reverse Engineer
+
+Tinder "prioritize potential matches who are active, and active at the same time" (Tinder, n.d.).
+Active users will be more visible to swipers.
+
+Tinder uses the following for their personalized recommendation to help improve users matches (MLconf, 2017).
+
+-   Similar Photos (Tinder, n.d.)
+
+-   Collaborative filtering (MLconf, 2017)
+
+-   Content-based filtering: Tinder uses natural language processing to help match users with common bios (MLconf, 2017).\
+
+-   Tinder Vectors (TinVec):
+
+    On Tinder, users can be a swiper or swipee. Each swipee is mapped on a high dimensional vector (MLconf, 2017). Similar users are users who share common characteristics, such as activities, interests, hobbies, career path, etc. Similar users are closer in the embeding space. Tinder calculates a preference vector for a user based on a user's right swipes. The preference vector is calculated by taking the mean of the embedded vectors of the user's right swipes. Tinder will recommend users that are close to the preference vector. In other words, Tinder will recommend users that share similar characteristics of the users they already liked.
+
+Tinder also set rules for user. Users can only use one super like per day. To ensure the accuracy of matching, users are limited to 100 right swipes per day. 
+
+# Improve Reccommender System
+
+Often times, users do not know what they are looking in Tinder.
+Perhaps Tinder can create a separate mode for those to meet new people.
+Another popular dating app, Bumble, has a similar idea.
+Bumble has other modes beside dating: Bumble BFF, and Bumble Bizz.
+
+# Source
+
+1.  Karthikeyan, A.
+    (2023, March 10).
+    Tinder's winning marketing strategy: Swipe Right On Success.
+    StartupTalky.
+    Retrieved April 18, 2023, from <https://startuptalky.com/tinder-marketing-strategy/>
+
+2.  <https://www.vox.com/2019/2/7/18210998/tinder-algorithm-swiping-tips-dating-app-science>
+
+3.  Bowles, N.
+    (2016, April 22).
+    Mr. (swipe) right?
+    The California Sunday Magazine.
+    Retrieved April 18, 2023, from <https://story.californiasunday.com/sean-rad-tinder/>
+
+4.  Morley, S.
+    (2023, April 18).
+    What are you looking for on tinder?
+    how you should answer this question.
+    Dude Hack.
+    Retrieved April 19, 2023, from <https://dude-hack.com/what-are-you-looking-for-on-tinder/>
+
+5.  MLconf.
+    (2017).
+    Dr. Steve Liu, Chief Scientist, Tinder.
+    Retrieved April 20, 2023, from <https://www.youtube.com/watch?v=j2rfLFYYdfM&ab_channel=MLconf>.
+
+6.  Tinder.
+    (n.d.).
+    Powering tinder® --- the method behind our matching.
+    A Guide To Tinder \> Matching and Messaging.
+    Retrieved April 19, 2023, from <https://www.help.tinder.com/hc/en-us/articles/7606685697037-Powering-Tinder-The-Method-Behind-Our-Matching>
