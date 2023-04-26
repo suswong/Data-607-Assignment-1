@@ -123,6 +123,8 @@ for(i in 1:ncol(average_rating)){
   }
 }
 
+average_rating[,5:12] <-round(average_rating[,5:12],2)
+
 datatable(average_rating, options = list(scrollX = TRUE))
 ```
 
@@ -133,3 +135,10 @@ The following people did not watch "Everything Everywhere All at Once": Mel, Iva
 The following people did not watch "Scream": Jenny, James, Ivan, and Jack. Out of all four people, Jenny has the highest estimate. 
 
 Ivan did not watch "Everything Everywhere All at Once" and "Scream". However, he has a higher estimate for the first movie. He is likely to like this movie more. 
+
+
+# Source
+
+The link below shows me how to use a loop to replace a NA value. The example in the link replaces the NA value with the median of the column. I wanted to replace the NA value with estimated movie rating for a user. 
+
+https://stackoverflow.com/questions/67075477/replacing-na-values-in-a-data-frame-with-the-median-using-a-for-loop
