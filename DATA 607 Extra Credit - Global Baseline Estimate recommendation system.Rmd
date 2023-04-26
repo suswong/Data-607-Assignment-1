@@ -1,0 +1,135 @@
+---
+title: "DATA 607 Extra Credit - Global Baseline Estimate Recommendation System"
+author: "Susanna Wong"
+date: "2023-04-25"
+output:
+  html_document:
+    theme: cerulean
+    toc: true
+    toc_float: true
+editor_options: 
+  markdown: 
+    wrap: sentence
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Assignment Prompt
+
+Using the information you collected on movie ratings, implement a Global Baseline Estimate recommendation system in R.  
+Most recommender systems use personalized algorithms like “content management” and “item-item collaborative filtering.” Sometimes non-personalized recommenders are also useful or necessary. One of the best non-personalized recommender system algorithms is the “Global Baseline Estimate".
+The job here is to use the survey data collected and write the R code that makes a movie recommendation using the Global Baseline Estimate algorithm.  Please see the attached spreadsheet for implementation details.
+
+In this assignment 2, I asked my friends and family to rate 6 movies on a scale of 1 to 5. I took their response and created a table. Below is the link to the Google Form. <https://docs.google.com/forms/d/e/1FAIpQLSd3ht1QlE3axt5LtI3KMkc4skkR9r6wn8PqtPYvVQphLhuQug/viewform>
+
+# Connect to SQL
+
+```{r}
+library(tidyverse)
+library(DT)
+library(RMySQL)
+library(DBI)
+dbconnect = dbConnect(RMySQL::MySQL(),
+                           dbname='Movie Rating',
+                           host='localhost',
+                           port=3306,
+                           user='root',
+                           password = rstudioapi::askForPassword("Database password"))
+
+rating <- dbGetQuery(dbconnect, "SELECT * FROM `Movie Rating`.`Movie Rating`")
+datatable(rating, options = list(scrollX = TRUE))
+```
+
+# Movie 
+Below is a table of the movies that each person is rating.
+
+```{r}
+movies <- dbGetQuery(dbconnect, "SELECT * FROM `Movie Rating`.Movie;")
+datatable(movies, caption = 'Table 1: Movie title and Year', options = list(scrollX = TRUE))
+```
+
+# Reviewer Information 
+Here is table of first name, age, and gender of each person.
+
+```{r}
+person <- dbGetQuery(dbconnect, "SELECT * FROM `Movie Rating`.Person;")
+datatable(person, caption = 'Table 2: Information of Reviewers', options = list(scrollX = TRUE))
+```
+
+# Calculate the average user rating and average movie rating
+Here is a table of each person's rating of each movie. There are missing values for those people who has not seen a movie. 4 people have never seen "Everything Everywhere All at Once" and "Scream". 2 people has never seen "Top Gun: Maverick".
+
+```{r }
+rating <- dbGetQuery(dbconnect, "SELECT * FROM `Movie Rating`.`Movie Rating`")
+datatable(rating, caption = 'Table 3: Ratings of each movie.', options = list(scrollX = TRUE))
+```
+
+Below is a table of the average rating of each movie and average rating for each user. Some people did not see certain movies. So there are missing values. I used "na.rm = TRUE" to deal with missing values. Avengers: Endgame has the highest average rating and Scream has the lowest average rating. Both movies "Everything Everywhere All at Once" and "Scream" had 4 missing values each. Yet, "Everything Everywhere All at Once" had a higher average rating than "Scream" did.
+
+```{r}
+
+rating$user_avg <-apply(rating[,5:10],1,mean,na.rm=TRUE) # Calculate the average user rating
+
+average_movie <- summarize_all(rating, mean, na.rm=TRUE) # Calculate average movie rating in a separate dataframe (Calculate the mean of each column)
+
+average_rating <- rbind(rating, average_movie) # Combine the two dataframes above
+
+average_rating[9,1] <- NA
+
+average_rating[9,"Gender"] <- "average"
+
+datatable(average_rating, options = list(scrollX = TRUE))
+```
+
+# Calculate Each Movie's Rating Relative to Average and User's rating relative to average
+
+Movies's rating relative to average = Movie average - Mean Movie
+
+User's rating relative to average = User average - Mean Movie
+
+```{r}
+# Calculate Each User's Rating Relative to Average 
+average_rating <- average_rating %>%
+  mutate(user_relative_rating = user_avg - average_rating[9,11])
+  
+average_rating <- average_rating %>% 
+  add_row(Gender = "movie_relative_rating")
+
+# Calculate Each Movie's Rating Relative to Average
+
+average_rating[10,5] <- average_rating[9,5] - average_rating[9,11]
+average_rating[10,6] <- average_rating[9,6] - average_rating[9,11]
+average_rating[10,7] <- average_rating[9,7] - average_rating[9,11]
+average_rating[10,8] <- average_rating[9,8] - average_rating[9,11]
+average_rating[10,9] <- average_rating[9,9] - average_rating[9,11]
+average_rating[10,10] <- average_rating[9,10] - average_rating[9,11]
+```
+
+# Calculate User's Rating for Movies They did not watch 
+
+There are missing values for those people who has not seen a movie. 4 people have never seen "Everything Everywhere All at Once" and "Scream". 2 people has never seen "Top Gun: Maverick". 
+
+For those missing values, we estimate their rating for those movies using the “Global Baseline Estimate". 
+
+Global Baseline Estimate = Mean Movie Rating + Movies's rating relative to average + User's rating relative to average
+
+```{r}
+for(i in 1:ncol(average_rating)){
+  if(is.numeric(average_rating[[i]])){
+    na <- is.na(average_rating[[i]])
+    average_rating[na, i] <- average_rating[9,11] + average_rating[10,i] + average_rating[na, 12]
+  }
+}
+
+datatable(average_rating, options = list(scrollX = TRUE))
+```
+
+# Conclusion
+
+The following people did not watch "Everything Everywhere All at Once": Mel, Ivan, Jack, and Bob. Out of all four people, Ivan has the highest estimate. 
+
+The following people did not watch "Scream": Jenny, James, Ivan, and Jack. Out of all four people, Jenny has the highest estimate. 
+
+Ivan did not watch "Everything Everywhere All at Once" and "Scream". However, he has a higher estimate for the first movie. He is likely to like this movie more. 
